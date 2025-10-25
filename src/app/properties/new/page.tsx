@@ -3,19 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { db, storage, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Sparkles, Upload, Loader2, X } from 'lucide-react';
+import { Sparkles, Link as LinkIcon, Loader2, X } from 'lucide-react';
 
 export default function NewPropertyPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>(['']);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,22 +44,21 @@ export default function NewPropertyPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setImages(prev => [...prev, ...files]);
-
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleImageUrlChange = (index: number, value: string) => {
+    const newUrls = [...imageUrls];
+    newUrls[index] = value;
+    setImageUrls(newUrls);
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  const addImageUrlField = () => {
+    if (imageUrls.length < 10) {
+      setImageUrls([...imageUrls, '']);
+    }
+  };
+
+  const removeImageUrl = (index: number) => {
+    const newUrls = imageUrls.filter((_, i) => i !== index);
+    setImageUrls(newUrls.length === 0 ? [''] : newUrls);
   };
 
   const generateDescription = async () => {
@@ -98,14 +95,8 @@ export default function NewPropertyPage() {
 
     setLoading(true);
     try {
-      // Subir imágenes
-      const imageUrls: string[] = [];
-      for (const image of images) {
-        const storageRef = ref(storage, `properties/${user.uid}/${Date.now()}_${image.name}`);
-        await uploadBytes(storageRef, image);
-        const url = await getDownloadURL(storageRef);
-        imageUrls.push(url);
-      }
+      // Filtrar URLs vacías
+      const validImageUrls = imageUrls.filter(url => url.trim() !== '');
 
       // Crear documento de propiedad
       const propertyData = {
@@ -125,7 +116,7 @@ export default function NewPropertyPage() {
         bathrooms: Number(formData.bathrooms),
         area: Number(formData.area),
         features: formData.features.split(',').map(f => f.trim()).filter(f => f),
-        images: imageUrls,
+        images: validImageUrls,
         available: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -364,46 +355,77 @@ export default function NewPropertyPage() {
                 />
               </div>
 
-              {/* Imágenes */}
+              {/* URLs de Imágenes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fotos de la propiedad
+                  URLs de imágenes de la propiedad
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <label className="cursor-pointer">
-                    <span className="btn-primary">Seleccionar imágenes</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                  <p className="text-sm text-gray-500 mt-2">
-                    PNG, JPG hasta 5MB (máximo 10 imágenes)
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Tip:</strong> Puedes obtener imágenes gratuitas de{' '}
+                    <a href="https://unsplash.com/s/photos/house" target="_blank" rel="noopener noreferrer" className="underline">
+                      Unsplash
+                    </a>
+                    {' '}o{' '}
+                    <a href="https://www.pexels.com/search/apartment/" target="_blank" rel="noopener noreferrer" className="underline">
+                      Pexels
+                    </a>
+                    . Haz clic derecho en la imagen → "Copiar dirección de imagen" y pégala abajo.
                   </p>
                 </div>
 
-                {imagePreviews.length > 0 && (
-                  <div className="grid grid-cols-4 gap-4 mt-4">
-                    {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={preview}
-                          alt={`Preview ${index}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
+                <div className="space-y-3">
+                  {imageUrls.map((url, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <LinkIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => handleImageUrlChange(index, e.target.value)}
+                        className="input-field flex-1"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                      {imageUrls.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImageUrl(index)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-5 h-5" />
                         </button>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {imageUrls.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={addImageUrlField}
+                    className="btn-secondary text-sm mt-3"
+                  >
+                    + Agregar otra imagen
+                  </button>
+                )}
+
+                {/* Preview de imágenes */}
+                {imageUrls.some(url => url.trim() !== '') && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Vista previa:</p>
+                    <div className="grid grid-cols-4 gap-4">
+                      {imageUrls.filter(url => url.trim() !== '').map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=Error+cargando+imagen';
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
