@@ -1,29 +1,21 @@
 // src/app/api/recommendations/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getPropertyRecommendations } from '@/ai/anthropic';
+import { NextResponse } from 'next/server';
+import { generateRecommendations } from '@/ai/groq';  // ← CAMBIO AQUÍ
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { userPreferences, availableProperties } = await request.json();
+    const userPreferences = await request.json();
 
-    if (!userPreferences || !availableProperties) {
-      return NextResponse.json(
-        { error: 'Datos incompletos' },
-        { status: 400 }
-      );
-    }
+    const recommendations = await generateRecommendations(userPreferences);
 
-    // Obtener recomendaciones usando Claude
-    const recommendations = await getPropertyRecommendations(
-      userPreferences,
-      availableProperties
-    );
-
-    return NextResponse.json({ recommendations });
+    return NextResponse.json({ 
+      recommendations,
+      success: true 
+    });
   } catch (error) {
-    console.error('Error al obtener recomendaciones:', error);
+    console.error('Error generating recommendations:', error);
     return NextResponse.json(
-      { error: 'Error al obtener recomendaciones' },
+      { error: 'Failed to generate recommendations' },
       { status: 500 }
     );
   }

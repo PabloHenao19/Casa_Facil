@@ -1,34 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generatePropertyDescription } from '@/ai/anthropic';
+// src/app/api/properties/generate-description/route.ts
+import { NextResponse } from 'next/server';
+import { generatePropertyDescription } from '@/ai/groq';  // ← CAMBIO AQUÍ
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { type, bedrooms, bathrooms, price, location, features } = await request.json();
+    const propertyData = await request.json();
 
-    if (!type || !bedrooms || !bathrooms || !price || !location) {
-      return NextResponse.json(
-        { success: false, error: 'Faltan datos requeridos' },
-        { status: 400 }
-      );
-    }
+    const description = await generatePropertyDescription(propertyData);
 
-    const description = await generatePropertyDescription({
-      type,
-      bedrooms,
-      bathrooms,
-      price,
-      location,
-      features,
-    });
-
-    return NextResponse.json({
-      success: true,
+    return NextResponse.json({ 
       description,
+      success: true 
     });
   } catch (error) {
-    console.error('Error generando descripción:', error);
+    console.error('Error generating description:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al generar descripción' },
+      { error: 'Failed to generate description' },
       { status: 500 }
     );
   }

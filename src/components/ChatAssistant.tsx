@@ -89,7 +89,7 @@ export default function ChatAssistant() {
           </div>
           <div>
             <h3 className="font-semibold">Asistente IA</h3>
-            <p className="text-xs text-primary-100">Powered by Claude</p>
+            <p className="text-xs text-primary-100">Powered by Groq</p>
           </div>
         </div>
         <button
