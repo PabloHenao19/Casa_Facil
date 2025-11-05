@@ -79,7 +79,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-xl font-semibold mb-3">IA Inteligente</h3>
                 <p className="text-gray-600">
-                  Nuestro asistente con IA de Claude te ayuda a encontrar la propiedad
+                  Nuestro asistente con IA de Groq te ayuda a encontrar la propiedad
                   perfecta según tus necesidades y presupuesto.
                 </p>
               </div>
